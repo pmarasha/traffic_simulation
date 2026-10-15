@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Traffic Simulation Dashboard — Harare</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1419;
+         color: #e8e8e8; margin: 0; padding: 20px; }
+  header { display: flex; align-items: center; justify-content: space-between;
+           margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
+  h1 { margin: 0 0 3px; font-size: 22px; color: #5fb3e8; }
+  .sub { font-size: 12px; color: #8fa0b0; }
+  .header-right { display: flex; align-items: center; gap: 14px; }
+  .status-pill { display: flex; align-items: center; gap: 7px;
+                 background: #1a2028; border: 1px solid #2a323c;
+                 padding: 7px 14px; border-radius: 20px; font-size: 12px; }
+  .status-pill .dot { width: 9px; height: 9px; border-radius: 50%;
+                      background: #8fa0b0; }
+  .status-pill.live .dot { background: #5fe87a;
+                           box-shadow: 0 0 8px #5fe87a; }
+  .tick-info { font-size: 12px; color: #8fa0b0; }
+  .tick-info b { color: #e8e8e8; font-size: 14px; }
+  a.macro-link { color: #5fb3e8; text-decoration: none;
+                 border: 1px solid #2a4a5f; padding: 7px 14px;
+                 border-radius: 6px; font-size: 12px; }
+  a.macro-link:hover { background: #1a2a35; border-color: #5fb3e8; }
+
+  .controls { background: #1a2028; border: 1px solid #2a323c;
+              border-radius: 8px; padding: 12px 16px; margin-bottom: 18px;
+              display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  button { font-family: inherit; font-size: 13px; font-weight: 500;
+           border: none; border-radius: 6px; padding: 9px 16px;
+           cursor: pointer; }
+  .btn-primary { background: #2a7a4f; color: #fff; }
+  .btn-primary:disabled { background: #2a323c; color: #5a6a7a;
+                          cursor: not-allowed; }
+  .btn-danger { background: #a83a3a; color: #fff; }
+  .btn-danger:disabled { background: #2a323c; color: #5a6a7a;
+                         cursor: not-allowed; }
+  .btn-secondary { background: #2a3540; color: #e8e8e8; }
+  .field { display: flex; align-items: center; gap: 6px;
+           font-size: 12px; color: #8fa0b0; }
+  .field input { width: 76px; padding: 7px 10px; background: #0f1419;
+                 border: 1px solid #2a323c; border-radius: 5px;
+                 color: #e8e8e8; font-family: inherit; font-size: 12px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr);
+          gap: 12px; margin-bottom: 18px; }
+  .kpi { background: #1a2028; border: 1px solid #2a323c;
+         border-radius: 8px; padding: 14px 18px; }
+  .kpi .lbl { font-size: 11px; color: #8fa0b0; text-transform: uppercase;
+              letter-spacing: 0.6px; margin-bottom: 6px; }
+  .kpi .val { font-size: 26px; font-weight: 600; color: #5fb3e8;
+              line-height: 1.1; }
+  .kpi .val.ok   { color: #5fe87a; }
+  .kpi .val.warn { color: #e8b85f; }
+  .kpi .val.bad  { color: #e85f5f; }
+  .kpi .unit { font-size: 13px; color: #8fa0b0; margin-left: 3px; }
+
+  .charts { display: grid; grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px; margin-bottom: 18px; }
+  .chart-panel { background: #1a2028; border: 1px solid #2a323c;
+                 border-radius: 8px; padding: 14px 16px; }
+  .chart-panel h3 { margin: 0 0 4px; font-size: 13px; color: #5fb3e8; }
+  .chart-panel .chart-sub { font-size: 11px; color: #8fa0b0;
+                            margin-bottom: 10px; }
+  .chart-panel svg { width: 100%; height: 130px; display: block; }
+
+  .bottom { display: grid; grid-template-columns: 1fr 1.2fr 1fr;
+            gap: 12px; }
+  .panel { background: #1a2028; border: 1px solid #2a323c;
+           border-radius: 8px; padding: 14px 16px; }
+  .panel h3 { margin: 0 0 10px; font-size: 12px; color: #5fb3e8;
+              text-transform: uppercase; letter-spacing: 1.4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; color: #8fa0b0; padding: 6px 6px;
+       border-bottom: 1px solid #2a323c; font-weight: 500;
+       font-size: 10px; text-transform: uppercase; }
+  td { padding: 6px 6px; border-bottom: 1px solid #202630; }
+  tr:last-child td { border-bottom: none; }
+  .signal { display: inline-block; padding: 2px 8px; border-radius: 10px;
+            font-size: 10px; font-weight: 700; }
+  .signal.RED    { background: #3a1a1a; color: #e85f5f; }
+  .signal.GREEN  { background: #1a3a1f; color: #5fe87a; }
+  .signal.YELLOW { background: #3a331a; color: #e8b85f; }
+  .log { background: #0f1419; border: 1px solid #202630;
+         border-radius: 6px; padding: 8px 10px; height: 200px;
+         overflow-y: auto; font-family: Consolas, monospace;
+         font-size: 11px; color: #a0b0c0; line-height: 1.6; }
+  .log .ts { color: #5a6a7a; }
+  .empty { color: #5a6a7a; font-style: italic; padding: 8px 6px;
+           font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🚦 Traffic Simulation Dashboard</h1>
+    <div class="sub">Harare Intelligent Traffic Network · live microscopic model</div>
+  </div>
+  <div class="header-right">
+    <div class="tick-info">tick <b id="tick">0</b></div>
+    <div id="status" class="status-pill">
+      <span class="dot"></span><span id="status-text">idle</span>
+    </div>
+    <a href="/macro" class="macro-link">Macro Model →</a>
+  </div>
+</header>
+
+<div class="controls">
+  <button id="btn-start" class="btn-primary">▶  Start Live</button>
+  <button id="btn-stop"  class="btn-danger" disabled>■  Stop</button>
+  <button id="btn-csv"   class="btn-secondary">⬇  Download CSV</button>
+  <div class="field">Duration <input id="cfg-duration" type="number" value="500"></div>
+  <div class="field">Max queue <input id="cfg-maxq" type="number" value="25"></div>
+  <div class="field">Tick delay <input id="cfg-delay" type="number" step="0.1" value="0.7"></div>
+  <button id="btn-save" class="btn-secondary">Save Config</button>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="lbl">Vehicles</div>
+    <div class="val" id="kpi-vehicles">—</div></div>
+  <div class="kpi"><div class="lbl">Congestion</div>
+    <div class="val" id="kpi-congestion">—</div></div>
+  <div class="kpi"><div class="lbl">Queue Length</div>
+    <div class="val" id="kpi-queue">—</div></div>
+  <div class="kpi"><div class="lbl">Avg Speed</div>
+    <div class="val" id="kpi-speed">—<span class="unit">m/s</span></div></div>
+  <div class="kpi"><div class="lbl">Throughput</div>
+    <div class="val" id="kpi-throughput">—</div></div>
+</div>
+
+<div class="charts">
+  <div class="chart-panel">
+    <h3>Traffic Flow</h3>
+    <div class="chart-sub">total vehicles on network</div>
+    <svg id="chart-flow" viewBox="0 0 320 130" preserveAspectRatio="none"></svg>
+  </div>
+  <div class="chart-panel">
+    <h3>Congestion</h3>
+    <div class="chart-sub">0.00 – 1.00 index</div>
+    <svg id="chart-cong" viewBox="0 0 320 130" preserveAspectRatio="none"></svg>
+  </div>
+  <div class="chart-panel">
+    <h3>Average Waiting Time</h3>
+    <div class="chart-sub">seconds per vehicle</div>
+    <svg id="chart-wait" viewBox="0 0 320 130" preserveAspectRatio="none"></svg>
+  </div>
+</div>
+
+<div class="bottom">
+  <div class="panel">
+    <h3>Traffic Light States</h3>
+    <table id="tbl-lights">
+      <thead><tr><th>Intersection</th><th>State</th><th>Time</th></tr></thead>
+      <tbody><tr><td colspan="3" class="empty">No data yet</td></tr></tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <h3>Approaches</h3>
+    <table id="tbl-approaches">
+      <thead><tr><th>Road</th><th>Dir</th><th>Veh</th><th>Queue</th><th>Signal</th></tr></thead>
+      <tbody><tr><td colspan="5" class="empty">No data yet</td></tr></tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <h3>Server Log</h3>
+    <div class="log" id="log">
+      <div><span class="ts">[--:--:--]</span> waiting for server…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let pollTimer = null;
+let history = [];
+let isLive = false;
+
+function ts() { return new Date().toTimeString().slice(0, 8); }
+
+function log(msg, cls = "") {
+  const el = document.getElementById("log");
+  const line = document.createElement("div");
+  line.innerHTML = `<span class="ts">[${ts()}]</span> <span class="${cls}">${msg}</span>`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+  while (el.children.length > 60) el.removeChild(el.firstChild);
+}
+
+function congestionClass(level) {
+  if (level === "LOW") return "ok";
+  if (level === "MODERATE") return "warn";
+  return "bad";
+}
+
+function signalClass(state) {
+  const s = String(state || "").toUpperCase();
+  if (s.includes("RED"))    return "RED";
+  if (s.includes("GREEN"))  return "GREEN";
+  if (s.includes("YELLOW")) return "YELLOW";
+  return "";
+}
+
+function drawChart(svgId, values, color, opts = {}) {
+  const svg = document.getElementById(svgId);
+  const W = 320, H = 130, PAD_L = 4, PAD_R = 4, PAD_T = 10, PAD_B = 12;
+  const n = values.length;
+  if (n === 0) {
+    svg.innerHTML = `<text x="${W/2}" y="${H/2}" fill="#5a6a7a" font-size="12" text-anchor="middle">no data</text>`;
+    return;
+  }
+  const min = opts.min ?? 0;
+  const max = Math.max(opts.max ?? Math.max(...values), 1e-6);
+  const span = Math.max(max - min, 1e-6);
+  const xAt = i => PAD_L + (i / Math.max(1, n - 1)) * (W - PAD_L - PAD_R);
+  const yAt = v => PAD_T + (1 - (v - min) / span) * (H - PAD_T - PAD_B);
+  let path = "";
+  for (let i = 0; i < n; i++) {
+    const x = xAt(i).toFixed(1);
+    const y = yAt(values[i]).toFixed(1);
+    path += (i === 0 ? "M" : "L") + x + " " + y + " ";
+  }
+  const areaPath = path + `L ${xAt(n-1).toFixed(1)} ${H-PAD_B} L ${xAt(0).toFixed(1)} ${H-PAD_B} Z`;
+  let grid = "";
+  for (let g = 0; g <= 4; g++) {
+    const y = PAD_T + (g / 4) * (H - PAD_T - PAD_B);
+    grid += `<line x1="${PAD_L}" y1="${y.toFixed(1)}" x2="${W-PAD_R}" y2="${y.toFixed(1)}" stroke="#202630" stroke-width="1"/>`;
+  }
+  svg.innerHTML =
+    grid +
+    `<path d="${areaPath}" fill="${color}" opacity="0.12"/>` +
+    `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+}
+
+function renderMetrics(m) {
+  if (!m || Object.keys(m).length === 0) return;
+  document.getElementById("kpi-vehicles").textContent   = m.vehicles ?? "—";
+  document.getElementById("kpi-queue").textContent      = m.queue_length ?? "—";
+  document.getElementById("kpi-throughput").textContent = m.throughput ?? "—";
+  const cEl = document.getElementById("kpi-congestion");
+  cEl.textContent = (m.congestion !== undefined) ? Number(m.congestion).toFixed(2) : "—";
+  cEl.className = "val " + congestionClass(m.congestion_level);
+  const sEl = document.getElementById("kpi-speed");
+  sEl.innerHTML = (m.avg_speed !== undefined)
+    ? `${Number(m.avg_speed).toFixed(1)}<span class="unit">m/s</span>`
+    : `—<span class="unit">m/s</span>`;
+
+  const tbodyL = document.querySelector("#tbl-lights tbody");
+  if (m.lights && m.lights.length) {
+    tbodyL.innerHTML = m.lights.map(l => `
+      <tr><td>${l.intersection ?? ""}</td>
+          <td><span class="signal ${signalClass(l.state)}">${l.state ?? ""}</span></td>
+          <td>${l.time_in_state ?? ""}s</td></tr>`).join("");
+  }
+  const tbodyA = document.querySelector("#tbl-approaches tbody");
+  if (m.approaches && m.approaches.length) {
+    tbodyA.innerHTML = m.approaches.map(a => `
+      <tr><td>${a.road ?? ""}</td><td>${a.direction ?? ""}</td>
+          <td>${a.vehicles ?? 0}</td><td>${a.queue ?? 0}</td>
+          <td><span class="signal ${signalClass(a.signal)}">${a.signal ?? ""}</span></td></tr>`).join("");
+  }
+}
+
+function renderCharts() {
+  drawChart("chart-flow", history.map(h => h.vehicles || 0), "#5fb3e8", { min: 0 });
+  drawChart("chart-cong", history.map(h => h.congestion || 0), "#e85f5f", { min: 0, max: 1 });
+  drawChart("chart-wait", history.map(h => h.avg_waiting_time || 0), "#e8b85f", { min: 0 });
+}
+
+async function fetchStatus() {
+  try {
+    const r = await fetch("/api/status");
+    const s = await r.json();
+    isLive = !!s.live;
+    document.getElementById("tick").textContent = s.tick ?? 0;
+    const pill = document.getElementById("status");
+    const txt = document.getElementById("status-text");
+    if (isLive) {
+      pill.className = "status-pill live";
+      txt.textContent = "simulation running…";
+    } else {
+      pill.className = "status-pill";
+      txt.textContent = s.history_points ? `idle · ${s.history_points} points recorded` : "idle";
+    }
+    document.getElementById("btn-start").disabled = isLive;
+    document.getElementById("btn-stop").disabled  = !isLive;
+    return s;
+  } catch (e) { return null; }
+}
+
+async function fetchMetrics() {
+  try {
+    const r = await fetch("/api/metrics");
+    const m = await r.json();
+    renderMetrics(m);
+    return m;
+  } catch (e) { return null; }
+}
+
+async function fetchHistory() {
+  try {
+    const r = await fetch("/api/history");
+    history = await r.json();
+    renderCharts();
+  } catch (e) {}
+}
+
+async function startSim() {
+  log("sending start request…");
+  await fetch("/api/start", { method: "POST" });
+  log("live simulation started", "msg-start");
+  await fetchStatus();
+  startPolling();
+}
+
+async function stopSim() {
+  log("sending stop request…");
+  await fetch("/api/stop", { method: "POST" });
+  log("live simulation stopped", "msg-stop");
+  await fetchStatus();
+}
+
+async function saveConfig() {
+  const cfg = {
+    duration:   Number(document.getElementById("cfg-duration").value),
+    max_queue:  Number(document.getElementById("cfg-maxq").value),
+    tick_delay: Number(document.getElementById("cfg-delay").value),
+  };
+  await fetch("/api/config", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cfg),
+  });
+  log(`config saved: duration=${cfg.duration}, max_queue=${cfg.max_queue}, tick_delay=${cfg.tick_delay}`);
+}
+
+function downloadCSV() {
+  window.location.href = "/api/export.csv";
+  log("downloading CSV…");
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    const s = await fetchStatus();
+    await fetchMetrics();
+    await fetchHistory();
+    if (s && !s.live && history.length > 0) {
+      log("stream finished");
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }, 1000);
+}
+
+document.getElementById("btn-start").onclick = startSim;
+document.getElementById("btn-stop").onclick  = stopSim;
+document.getElementById("btn-save").onclick  = saveConfig;
+document.getElementById("btn-csv").onclick   = downloadCSV;
+
+(async function boot() {
+  log("dashboard loaded");
+  const s = await fetchStatus();
+  if (s) {
+    if (s.config) {
+      document.getElementById("cfg-duration").value = s.config.duration;
+      document.getElementById("cfg-maxq").value     = s.config.max_queue;
+      document.getElementById("cfg-delay").value    = s.config.tick_delay;
+    }
+    if (s.simulation_available === false) log("micro engine not available", "msg-err");
+    else log("micro engine ready");
+  }
+  await fetchMetrics();
+  await fetchHistory();
+  if (s && s.live) startPolling();
+})();
+</script>
+</body>
+</html>

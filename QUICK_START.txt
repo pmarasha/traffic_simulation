@@ -1,0 +1,115 @@
+========================================================
+  TRAFFIC SIMULATION DASHBOARD — QUICK START
+========================================================
+
+FILES IN THIS FOLDER
+--------------------
+  traffic_dashboard_api.py   Flask backend (API + serves HTML)
+  dashboard.html             Frontend web interface
+  requirements.txt           Python dependencies
+  run_simulation.py          Your simulation logic (existing)
+  QUICK_START.txt            This file
+
+
+--------------------------------------------------------
+STEP 1 — OPEN A TERMINAL IN THIS FOLDER
+--------------------------------------------------------
+  cd C:\Users\pmarasha.SIRDC\Desktop\traffic_simulation
+
+
+--------------------------------------------------------
+STEP 2 — ACTIVATE THE VIRTUAL ENVIRONMENT
+--------------------------------------------------------
+  venv\Scripts\activate
+
+  You should see (venv) at the start of the prompt.
+
+
+--------------------------------------------------------
+STEP 3 — INSTALL DEPENDENCIES
+--------------------------------------------------------
+  pip install -r requirements.txt
+
+  If requirements.txt is missing, create it with:
+
+      pip install flask flask-cors
+      pip freeze > requirements.txt
+
+
+--------------------------------------------------------
+STEP 4 — START THE BACKEND SERVER
+--------------------------------------------------------
+  python traffic_dashboard_api.py
+
+  Expected output:
+
+      ============================================================
+        Traffic Simulation Dashboard API
+        Serving from: C:\...\traffic_simulation
+        Dashboard:    http://localhost:5000
+        Sim module:   loaded   (or: NOT available (mock mode))
+      ============================================================
+
+  Leave this terminal window OPEN — closing it stops the server.
+
+
+--------------------------------------------------------
+STEP 5 — OPEN THE DASHBOARD
+--------------------------------------------------------
+  In your browser, go to:
+
+      http://localhost:5000
+
+
+--------------------------------------------------------
+STEP 6 — USING THE DASHBOARD
+--------------------------------------------------------
+  * Metrics auto-refresh every few seconds
+  * Click "Run Simulation" to trigger a run
+  * Adjust config (duration, vehicle rate) and click Save
+  * Charts update from /api/history
+
+
+--------------------------------------------------------
+STEP 7 — STOPPING
+--------------------------------------------------------
+  In the terminal running the server:  Ctrl + C
+
+
+--------------------------------------------------------
+TROUBLESHOOTING
+--------------------------------------------------------
+  "ModuleNotFoundError: No module named 'flask'"
+      -> venv not activated, or run: pip install flask flask-cors
+
+  "Address already in use"
+      -> Another process is on port 5000. Edit the last line of
+         traffic_dashboard_api.py and change port=5000 to port=5001.
+
+  "dashboard.html not found" (404 in browser)
+      -> Make sure dashboard.html is in the SAME folder as
+         traffic_dashboard_api.py.
+
+  Dashboard loads but charts are empty
+      -> Backend fell back to mock mode. Make sure your
+         run_simulation.py exposes a run_simulation(**kwargs)
+         function, OR write results to simulation_output.json.
+
+  CORS errors in browser console
+      -> flask-cors is installed (it's in requirements.txt).
+         Confirm with: pip show flask-cors
+
+
+--------------------------------------------------------
+API REFERENCE (for testing in browser)
+--------------------------------------------------------
+  GET  http://localhost:5000/api/status     -> server info
+  GET  http://localhost:5000/api/metrics    -> latest snapshot
+  GET  http://localhost:5000/api/history    -> time-series
+  GET  http://localhost:5000/api/config     -> current config
+  POST http://localhost:5000/api/simulate   -> start a run
+  POST http://localhost:5000/api/config     -> update config
+
+
+--------------------------------------------------------
+========================================================

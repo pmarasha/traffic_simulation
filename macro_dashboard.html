@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>National Transport Macro Model — Zimbabwe</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1419;
+         color: #e8e8e8; margin: 0; padding: 24px; }
+  h1 { color: #5fb3e8; margin: 0 0 4px; font-size: 22px; }
+  .sub { color: #8fa0b0; font-size: 13px; margin-bottom: 20px; }
+
+  /* ---------- SCENARIO PANEL ---------- */
+  .scenario { background: #1a2028; border: 1px solid #2a4a5f;
+              border-radius: 8px; padding: 16px 20px; margin-bottom: 18px;
+              display: grid; grid-template-columns: 1fr 1fr auto;
+              gap: 20px 24px; align-items: center; }
+  .scenario h2 { grid-column: 1 / -1; margin: 0; color: #5fb3e8;
+                 font-size: 12px; text-transform: uppercase;
+                 letter-spacing: 1.4px; font-weight: 600; }
+  .scenario .hint { grid-column: 1 / -1; font-size: 11px;
+                    color: #8fa0b0; margin: -12px 0 0; }
+  .slider-group { display: flex; flex-direction: column; gap: 6px; }
+  .slider-head { display: flex; justify-content: space-between;
+                 font-size: 11px; color: #8fa0b0;
+                 text-transform: uppercase; letter-spacing: 0.4px; }
+  .slider-head b { color: #5fb3e8; font-size: 13px; }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 6px;
+                      background: #2a323c; border-radius: 3px; outline: none; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: #5fb3e8; cursor: pointer; border: 2px solid #0f1419; }
+  input[type=range]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%; background: #5fb3e8;
+    cursor: pointer; border: 2px solid #0f1419; }
+  .scenario button { background: #2a3540; color: #e8e8e8; border: none;
+                     padding: 10px 16px; border-radius: 6px; cursor: pointer;
+                     font-family: inherit; font-size: 12px; align-self: center; }
+  .scenario button:hover { background: #35424f; }
+  .delta { font-size: 11px; }
+  .delta.up   { color: #e85f5f; }
+  .delta.down { color: #5fe87a; }
+  .delta.flat { color: #8fa0b0; }
+
+  /* ---------- CARDS ---------- */
+  .cards { display: flex; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+  .card { background: #1a2028; border: 1px solid #2a323c; border-radius: 8px;
+          padding: 12px 18px; min-width: 140px; }
+  .card .lbl { font-size: 11px; color: #8fa0b0; text-transform: uppercase;
+               letter-spacing: 0.5px; }
+  .card .val { font-size: 24px; font-weight: 600; color: #5fb3e8; margin-top: 4px; }
+  .card .val.warn { color: #e8b85f; }
+  .card .val.bad  { color: #e85f5f; }
+  .card .val.ok   { color: #5fe87a; }
+
+  /* ---------- LAYOUT ---------- */
+  .layout { display: grid; grid-template-columns: 1.05fr 1fr; gap: 22px;
+            align-items: start; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel { background: #1a2028; border: 1px solid #2a323c;
+           border-radius: 8px; padding: 16px; }
+  .panel h2 { color: #5fb3e8; font-size: 13px; text-transform: uppercase;
+              letter-spacing: 1.5px; margin: 0 0 14px; font-weight: 600; }
+
+  /* ---------- BIG MAP ---------- */
+  /* SVG scales with panel width; viewBox aspect ratio 720:480 */
+  svg { width: 100%; aspect-ratio: 720 / 480; height: auto;
+        display: block; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; color: #8fa0b0; padding: 8px;
+       border-bottom: 1px solid #2a323c; font-weight: 500;
+       font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 8px; border-bottom: 1px solid #202630; }
+  tr:last-child td { border-bottom: none; }
+
+  .tag { display: inline-block; padding: 3px 9px; border-radius: 10px;
+         font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+  .tag.ok   { background: #1a3a1f; color: #5fe87a; }
+  .tag.near { background: #3a331a; color: #e8b85f; }
+  .tag.bad  { background: #3a1a1a; color: #e85f5f; }
+
+  .legend { margin-top: 16px; display: flex; gap: 20px; flex-wrap: wrap;
+            font-size: 12px; color: #c0d0e0; }
+  .legend .dot { display: inline-block; width: 12px; height: 12px;
+                 border-radius: 6px; margin-right: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<h1>National Transport Macro Model — Zimbabwe</h1>
+<div class="sub">4-step demand model · 10 provinces · 12 national corridors · scenario mode</div>
+
+<!-- ============ SCENARIO CONTROLS ============ -->
+<div class="scenario">
+  <h2>Scenario Controls</h2>
+  <div class="hint">Adjust the sliders to model growth, network investment, or demand shifts. The map and table update live.</div>
+
+  <div class="slider-group">
+    <div class="slider-head">
+      <span>Travel Demand Multiplier</span>
+      <b id="trip-mult-val">1.00×</b>
+    </div>
+    <input id="trip-mult" type="range" min="0.5" max="3.0" step="0.05" value="1.0">
+    <div class="delta flat" id="trip-mult-delta">baseline</div>
+  </div>
+
+  <div class="slider-group">
+    <div class="slider-head">
+      <span>Peak Hour Severity</span>
+      <b id="peak-val">10%</b>
+    </div>
+    <input id="peak" type="range" min="0.05" max="0.15" step="0.01" value="0.10">
+    <div class="delta flat" id="peak-delta">baseline</div>
+  </div>
+
+  <button id="btn-reset">↺ Reset to Baseline</button>
+</div>
+
+<!-- ============ CARDS ============ -->
+<div class="cards" id="cards"></div>
+
+<!-- ============ MAP + TABLE ============ -->
+<div class="layout">
+  <div class="panel">
+    <h2>Corridor Loading (V/C Ratio)</h2>
+    <svg id="map" viewBox="0 0 720 480" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="legend">
+      <span><span class="dot" style="background:#5fe87a"></span>V/C &lt; 0.70 · Free flow</span>
+      <span><span class="dot" style="background:#e8b85f"></span>0.70 – 0.90 · Near-capacity</span>
+      <span><span class="dot" style="background:#e8845f"></span>0.90 – 1.10 · Over capacity</span>
+      <span><span class="dot" style="background:#e85f5f"></span>&gt; 1.10 · Severely overloaded</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Corridor Ranking (by V/C)</h2>
+    <table id="tbl">
+      <thead>
+        <tr><th>Link</th><th>Flow/day</th><th>V/C</th><th>Delay</th><th>Status</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ZONE GEOMETRY
+// ============================================================
+const ZONES = {
+  "ZW-HA": [-17.83, 31.05, "Harare",        52,   5, "start"],
+  "ZW-BY": [-20.15, 28.58, "Bulawayo",     -14,  24, "middle"],
+  "ZW-MA": [-18.97, 32.67, "Manicaland",    24,   5, "start"],
+  "ZW-MC": [-16.75, 31.07, "Mash. Central",  0, -20, "middle"],
+  "ZW-ME": [-18.17, 31.55, "Mash. East",    26,  16, "start"],
+  "ZW-MW": [-17.72, 29.91, "Mash. West",   -22,  16, "end"],
+  "ZW-MV": [-20.07, 30.83, "Masvingo",       0,  24, "middle"],
+  "ZW-MN": [-18.90, 27.20, "Mat. North",   -22,   5, "end"],
+  "ZW-MS": [-21.00, 29.00, "Mat. South",     0,  24, "middle"],
+  "ZW-MI": [-19.45, 29.82, "Midlands",     -20,   5, "end"]
+};
+
+const NODE_R = {
+  "ZW-HA": 12, "ZW-BY": 8, "ZW-MA": 8.5, "ZW-MC": 7.5, "ZW-ME": 8,
+  "ZW-MW": 8.5, "ZW-MV": 8.5, "ZW-MN": 7.5, "ZW-MS": 7.5, "ZW-MI": 8.5
+};
+
+const BORDER = [
+  [-17.90, 25.30], [-17.80, 26.10], [-17.50, 27.20], [-16.70, 28.70],
+  [-16.40, 29.40], [-16.00, 30.50], [-15.60, 31.20], [-16.00, 32.00],
+  [-16.40, 32.90], [-17.50, 33.00], [-18.50, 32.90], [-19.50, 32.90],
+  [-20.40, 32.70], [-21.30, 32.10], [-21.80, 31.70], [-22.20, 31.50],
+  [-22.30, 31.00], [-22.40, 30.00], [-22.40, 29.30], [-22.20, 29.00],
+  [-22.20, 28.00], [-21.50, 27.70], [-21.00, 27.70], [-20.20, 26.90],
+  [-19.50, 26.00], [-18.60, 25.70], [-18.00, 25.40], [-17.90, 25.30]
+];
+
+const LAT_MIN = -22.8, LAT_MAX = -15.3;
+const LON_MIN = 25.0,  LON_MAX = 33.3;
+const SVG_W = 720, SVG_H = 480;
+const PAD_X = 30, PAD_Y = 20;
+
+// ============================================================
+// SCENARIO STATE
+// ============================================================
+const BASELINE = { trip_mult: 1.0, peak: 0.10 };
+
+// ============================================================
+// HELPERS
+// ============================================================
+function project(lat, lon) {
+  const x = PAD_X + ((lon - LON_MIN) / (LON_MAX - LON_MIN)) * (SVG_W - 2*PAD_X);
+  const y = PAD_Y + ((LAT_MAX - lat) / (LAT_MAX - LAT_MIN)) * (SVG_H - 2*PAD_Y);
+  return [x, y];
+}
+
+function colorForVC(vc) {
+  if (vc < 0.70) return "#5fe87a";
+  if (vc < 0.90) return "#e8b85f";
+  if (vc < 1.10) return "#e8845f";
+  return "#e85f5f";
+}
+
+function strokeForVC(vc) {
+  if (vc < 0.70) return 4.0;
+  if (vc < 0.90) return 5.5;
+  if (vc < 1.10) return 7.0;
+  return 9.0;
+}
+
+function statusTag(status) {
+  if (status === "OK") return '<span class="tag ok">OK</span>';
+  if (status === "NEAR-CAPACITY") return '<span class="tag near">NEAR</span>';
+  return '<span class="tag bad">OVER</span>';
+}
+
+function debounce(fn, delay) {
+  let t = null;
+  return function(...args) {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// ============================================================
+// RENDER CARDS
+// ============================================================
+function renderCards(s) {
+  const cards = [
+    ["Provinces",    s.num_zones,                            ""],
+    ["Corridors",    s.num_links,                            ""],
+    ["Daily Trips",  Math.round(s.total_daily_trips).toLocaleString(), ""],
+    ["Max V/C",      s.max_vc_ratio.toFixed(2),
+                     s.max_vc_ratio >= 1.10 ? "bad" : s.max_vc_ratio >= 0.90 ? "warn" : "ok"],
+    ["Overloaded",   s.overloaded_count,
+                     s.overloaded_count > 0 ? "bad" : "ok"],
+    ["Near-cap.",    s.near_capacity_count,                  "warn"],
+    ["Total Delay",  s.total_delay_min.toFixed(0) + " min",  "warn"]
+  ];
+  document.getElementById("cards").innerHTML = cards.map(c =>
+    `<div class="card"><div class="lbl">${c[0]}</div>` +
+    `<div class="val ${c[2]}">${c[1]}</div></div>`
+  ).join("");
+}
+
+// ============================================================
+// RENDER MAP
+// ============================================================
+function renderMap(links) {
+  const svg = document.getElementById("map");
+  const parts = [];
+
+  const borderPts = BORDER.map(([lat, lon]) => project(lat, lon).join(",")).join(" ");
+  parts.push(`<polygon points="${borderPts}" fill="#141a20" ` +
+             `stroke="#2a3540" stroke-width="2" stroke-dasharray="4,4"/>`);
+
+  const sorted = [...links].sort((a, b) => a.vc_ratio - b.vc_ratio);
+
+  // Glow behind overloaded corridors
+  for (const link of sorted) {
+    if (link.vc_ratio < 0.90) continue;
+    const a = ZONES[link.from_zone], b = ZONES[link.to_zone];
+    if (!a || !b) continue;
+    const [x1, y1] = project(a[0], a[1]);
+    const [x2, y2] = project(b[0], b[1]);
+    const c = colorForVC(link.vc_ratio);
+    const w = strokeForVC(link.vc_ratio);
+    parts.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" ` +
+               `x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" ` +
+               `stroke="${c}" stroke-width="${(w+10).toFixed(1)}" ` +
+               `stroke-linecap="round" opacity="0.20"/>`);
+  }
+
+  // Corridors
+  for (const link of sorted) {
+    const a = ZONES[link.from_zone], b = ZONES[link.to_zone];
+    if (!a || !b) continue;
+    const [x1, y1] = project(a[0], a[1]);
+    const [x2, y2] = project(b[0], b[1]);
+    const c = colorForVC(link.vc_ratio);
+    const w = strokeForVC(link.vc_ratio);
+    parts.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" ` +
+               `x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" ` +
+               `stroke="${c}" stroke-width="${w.toFixed(1)}" ` +
+               `stroke-linecap="round" opacity="0.92"/>`);
+  }
+
+  // V/C labels on overloaded corridors
+  for (const link of links) {
+    if (link.vc_ratio < 0.90) continue;
+    const a = ZONES[link.from_zone], b = ZONES[link.to_zone];
+    if (!a || !b) continue;
+    const [x1, y1] = project(a[0], a[1]);
+    const [x2, y2] = project(b[0], b[1]);
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.max(1, Math.hypot(dx, dy));
+    const nx = -dy / len, ny = dx / len;
+    const lx = mx + nx * 14, ly = my + ny * 14 + 5;
+    const c = colorForVC(link.vc_ratio);
+    parts.push(
+      `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" ` +
+      `text-anchor="middle" font-size="12" font-weight="700" fill="${c}" ` +
+      `style="paint-order: stroke; stroke: #0f1419; stroke-width: 4;">` +
+      `${link.vc_ratio.toFixed(2)}</text>`
+    );
+  }
+
+  // Nodes
+  for (const [zid, z] of Object.entries(ZONES)) {
+    const [x, y] = project(z[0], z[1]);
+    const r = NODE_R[zid] || 8;
+    const isHub = zid === "ZW-HA";
+    const fill   = isHub ? "#5fb3e8" : "#2a3540";
+    const stroke = isHub ? "#a8d8f0" : "#5fb3e8";
+    const sw     = isHub ? 3 : 2;
+    parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" ` +
+               `fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`);
+    if (isHub) {
+      parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" ` +
+                 `r="${r+6}" fill="none" stroke="#5fb3e8" ` +
+                 `stroke-width="1.5" opacity="0.4"/>`);
+    }
+  }
+
+  // Labels
+  for (const [zid, z] of Object.entries(ZONES)) {
+    const [x, y] = project(z[0], z[1]);
+    const lx = x + z[3], ly = y + z[4], anchor = z[5];
+    const isHub = zid === "ZW-HA";
+    const color = isHub ? "#a8d8f0" : "#c0d0e0";
+    const size = isHub ? 14 : 12;
+    const weight = isHub ? 700 : 500;
+    parts.push(
+      `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" ` +
+      `text-anchor="${anchor}" font-size="${size}" font-weight="${weight}" ` +
+      `fill="${color}" ` +
+      `style="paint-order: stroke; stroke: #0f1419; stroke-width: 4;">` +
+      `${z[2]}</text>`
+    );
+  }
+
+  svg.innerHTML = parts.join("");
+}
+
+// ============================================================
+// RENDER TABLE
+// ============================================================
+function renderTable(links) {
+  const sorted = [...links].sort((a, b) => b.vc_ratio - a.vc_ratio);
+  document.querySelector("#tbl tbody").innerHTML = sorted.map(l => `
+    <tr>
+      <td><b>${l.link_id}</b><br>
+          <span style="color:#8fa0b0;font-size:10px">${l.length_km} km · ${l.road_class}</span></td>
+      <td>${Math.round(l.flow_veh_per_day).toLocaleString()}</td>
+      <td><b style="color:${colorForVC(l.vc_ratio)}">${l.vc_ratio.toFixed(2)}</b></td>
+      <td>${l.delay_min.toFixed(1)} m</td>
+      <td>${statusTag(l.status)}</td>
+    </tr>
+  `).join("");
+}
+
+// ============================================================
+// DELTA DISPLAY
+// ============================================================
+function updateDelta(elId, current, baseline) {
+  const el = document.getElementById(elId);
+  if (baseline === null || baseline === undefined || baseline === 0) {
+    el.className = "delta flat";
+    el.textContent = "baseline";
+    return;
+  }
+  const diff = current - baseline;
+  if (Math.abs(diff) < 0.005) {
+    el.className = "delta flat";
+    el.textContent = "baseline";
+  } else if (diff > 0) {
+    el.className = "delta up";
+    el.textContent = `+${((diff / baseline) * 100).toFixed(0)}% vs baseline`;
+  } else {
+    el.className = "delta down";
+    el.textContent = `${((diff / baseline) * 100).toFixed(0)}% vs baseline`;
+  }
+}
+
+// ============================================================
+// FETCH & RENDER
+// ============================================================
+async function fetchScenario() {
+  const tripMult = Number(document.getElementById("trip-mult").value);
+  const peak     = Number(document.getElementById("peak").value);
+
+  const url = `/api/macro?trip_mult=${tripMult}&peak=${peak}`;
+  try {
+    const r = await fetch(url);
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error || "unknown error");
+
+    renderCards(data.summary);
+    renderMap(data.links);
+    renderTable(data.links);
+
+    updateDelta("trip-mult-delta", tripMult, BASELINE.trip_mult);
+    updateDelta("peak-delta",      peak,     BASELINE.peak);
+
+    document.getElementById("trip-mult-val").textContent = tripMult.toFixed(2) + "×";
+    document.getElementById("peak-val").textContent = Math.round(peak * 100) + "%";
+  } catch (e) {
+    document.body.insertAdjacentHTML("beforeend",
+      `<div style="color:#e85f5f;padding:12px">Scenario error: ${e.message}</div>`);
+  }
+}
+
+const debouncedFetch = debounce(fetchScenario, 120);
+
+// ============================================================
+// WIRE UP
+// ============================================================
+document.getElementById("trip-mult").addEventListener("input", debouncedFetch);
+document.getElementById("peak").addEventListener("input", debouncedFetch);
+
+document.getElementById("btn-reset").onclick = () => {
+  document.getElementById("trip-mult").value = BASELINE.trip_mult;
+  document.getElementById("peak").value = BASELINE.peak;
+  fetchScenario();
+};
+
+// ============================================================
+// BOOT
+// ============================================================
+fetchScenario();
+</script>
+</body>
+</html>
