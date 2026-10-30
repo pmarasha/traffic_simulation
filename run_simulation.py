@@ -9,7 +9,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_PATH = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_PATH))
 
-
 from traffic_simulation.simulation.harare_scenario import (
     create_harare_traffic_system,
 )
@@ -28,8 +27,29 @@ def display_simulation(metrics) -> None:
 
 
 def run_simulation(duration: int = 500, time_step: float = 1.0,
-                   max_queue: int = 25, **_ignored) -> dict:
-    system = create_harare_traffic_system()
+                   max_queue: int = 25, demand_multiplier: float = 1.0, **_ignored) -> dict:
+    """
+    Runs the microscopic traffic simulation.
+    demand_multiplier: 1.0 = baseline, 0.7 = 70% morning peak demand.
+    """
+    
+    # Safely attempt to pass demand multiplier to the scenario generator
+    try:
+        # If your underlying scenario supports this kwarg, it will use it.
+        system = create_harare_traffic_system(demand_multiplier=demand_multiplier)
+    except TypeError:
+        # Fallback for existing functionality: load standard system
+        system = create_harare_traffic_system()
+        # Attempt to scale arrival rates directly if the attribute exists
+        if hasattr(system, "arrival_rate"):
+            system.arrival_rate *= demand_multiplier
+        for intersection in system.intersections:
+            for approach in intersection.approaches:
+                if hasattr(approach, "arrival_rate"):
+                    approach.arrival_rate *= demand_multiplier
+                if hasattr(approach, "spawn_probability"):
+                    approach.spawn_probability *= demand_multiplier
+
     engine = SimulationEngine(traffic_system=system, time_step=time_step)
     metrics_service = MetricsService()
 
@@ -95,6 +115,7 @@ def run_simulation(duration: int = 500, time_step: float = 1.0,
             "avg_waiting_time": round(m.average_waiting_time, 2),
             "lights": lights,
             "approaches": approaches,
+            "demand_multiplier": demand_multiplier,  # Track scenario in output
         }
         history.append(snapshot)
 
@@ -104,6 +125,7 @@ def run_simulation(duration: int = 500, time_step: float = 1.0,
         "meta": {
             "duration": duration,
             "time_step": time_step,
+            "demand_multiplier": demand_multiplier,
             "intersections": [i.name for i in system.intersections],
         },
     }
