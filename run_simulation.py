@@ -27,28 +27,27 @@ def display_simulation(metrics) -> None:
 
 
 def run_simulation(duration: int = 500, time_step: float = 1.0,
-                   max_queue: int = 25, demand_multiplier: float = 1.0, **_ignored) -> dict:
+                   max_queue: int = 25, demand_factor: float = 1.0, **_ignored) -> dict:
     """
     Runs the microscopic traffic simulation.
-    demand_multiplier: 1.0 = baseline, 0.7 = 70% morning peak demand.
+    demand_factor: 1.0 = baseline, 0.7 = 70% morning peak demand.
     """
     
-    # Safely attempt to pass demand multiplier to the scenario generator
-    try:
-        # If your underlying scenario supports this kwarg, it will use it.
-        system = create_harare_traffic_system(demand_multiplier=demand_multiplier)
-    except TypeError:
-        # Fallback for existing functionality: load standard system
+    if demand_factor == 1.0:
         system = create_harare_traffic_system()
-        # Attempt to scale arrival rates directly if the attribute exists
-        if hasattr(system, "arrival_rate"):
-            system.arrival_rate *= demand_multiplier
-        for intersection in system.intersections:
-            for approach in intersection.approaches:
-                if hasattr(approach, "arrival_rate"):
-                    approach.arrival_rate *= demand_multiplier
-                if hasattr(approach, "spawn_probability"):
-                    approach.spawn_probability *= demand_multiplier
+    else:
+        try:
+            system = create_harare_traffic_system(demand_multiplier=demand_factor)
+        except TypeError:
+            system = create_harare_traffic_system()
+            if hasattr(system, "arrival_rate"):
+                system.arrival_rate *= demand_factor
+            for intersection in getattr(system, "intersections", []):
+                for approach in getattr(intersection, "approaches", []):
+                    if hasattr(approach, "arrival_rate"):
+                        approach.arrival_rate *= demand_factor
+                    if hasattr(approach, "spawn_probability"):
+                        approach.spawn_probability *= demand_factor
 
     engine = SimulationEngine(traffic_system=system, time_step=time_step)
     metrics_service = MetricsService()
@@ -115,7 +114,7 @@ def run_simulation(duration: int = 500, time_step: float = 1.0,
             "avg_waiting_time": round(m.average_waiting_time, 2),
             "lights": lights,
             "approaches": approaches,
-            "demand_multiplier": demand_multiplier,  # Track scenario in output
+            "demand_factor": demand_factor,
         }
         history.append(snapshot)
 
@@ -125,7 +124,7 @@ def run_simulation(duration: int = 500, time_step: float = 1.0,
         "meta": {
             "duration": duration,
             "time_step": time_step,
-            "demand_multiplier": demand_multiplier,
+            "demand_factor": demand_factor,
             "intersections": [i.name for i in system.intersections],
         },
     }
